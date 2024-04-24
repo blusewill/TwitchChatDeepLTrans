@@ -1,0 +1,4 @@
+python-dotenv
+twitchio
+PyDeepLX
+langdetect
