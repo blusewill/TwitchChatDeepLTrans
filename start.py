@@ -1,9 +1,12 @@
 import os
 import time
+import subprocess
 from langdetect import detect
 from dotenv import load_dotenv, dotenv_values 
 from PyDeepLX import PyDeepLX
 from twitchio.ext import commands
+from espeakng import ESpeakNG
+from playsound import playsound
 
 # Loading Variables
 load_dotenv()
@@ -25,10 +28,10 @@ class Bot(commands.Bot):
     # TwitchIO API without prefix
     async def event_message(self, message):
         orginal_message = message.content
-        
         language_detection = detect(message.content)
         language_translate_back = os.getenv("LANG_DETECT")
         language_fallback = os.getenv("LANG_TO")
+        voice_model = os.getenv("TTS-MODEL")
         print(f"Detected Language = {language_detection}")
         if language_detection == language_translate_back:
             if message.echo:
@@ -38,6 +41,8 @@ class Bot(commands.Bot):
             translate_message = PyDeepLX.translate(orginal_message, language_detection, language_fallback)
             print(f"Translated to - {translate_message}")
             await message.channel.send(f"{message.author.name} - {translate_message}")
+            subprocess.run(["edge-tts", "--text",  f"{translate_message}", "--write-media", "audio.mp3", "-v", f"{voice_model}"])
+            playsound("audio.mp3")
             return
         else:
             if message.echo:
@@ -47,25 +52,9 @@ class Bot(commands.Bot):
             translate_message = PyDeepLX.translate(orginal_message)
             print(f"Translated to - {translate_message}")
             await message.channel.send(f"{message.author.name} - {translate_message}")
+            subprocess.run(["edge-tts", "--text",  f"{translate_message}", "--write-media", "audio.mp3", "-v", f"{voice_model}"])
+            playsound("audio.mp3")
             return
-   
-    # Ping Test
-    @commands.command(name="ping")
-    async def ping(self, ctx: commands.Context):
-        is_moderator = 'moderator' in ctx.author.badges 
-        is_broadcaster = 'broadcaster' in ctx.author.badges
-        if is_moderator or is_broadcaster:
-            await ctx.send(f'You Test your bot it scores 100% working. Right? {ctx.author.name}')
-    
-    # Message Repeater 
-    
-    @commands.command(name="say")
-    async def say(self, ctx: commands.Context, *,phrase: "str") -> None:
-        is_moderator = 'moderator' in ctx.author.badges 
-        is_broadcaster = 'broadcaster' in ctx.author.badges
-        if is_moderator or is_broadcaster:
-           response = f"{phrase}"
-           await ctx.send(response)
 
 bot = Bot()
 bot.run()

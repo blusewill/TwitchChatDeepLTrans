@@ -2,3 +2,7 @@ python-dotenv
 twitchio
 PyDeepLX
 langdetect
+edge-tts
+setuptools
+playsound
+mpv
