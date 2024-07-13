@@ -1,8 +1,9 @@
 python-dotenv
 twitchio
-PyDeepLX
+deepl-cli
 langdetect
 edge-tts
 setuptools
+wheel
 playsound
-mpv
+pygobject

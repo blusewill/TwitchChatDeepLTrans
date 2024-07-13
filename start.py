@@ -1,11 +1,11 @@
 import os
 import time
-import subprocess
+import asyncio
 from langdetect import detect
-from dotenv import load_dotenv, dotenv_values 
-from PyDeepLX import PyDeepLX
+from dotenv import load_dotenv
+from deepl import DeepLCLI
 from twitchio.ext import commands
-from espeakng import ESpeakNG
+import edge_tts
 from playsound import playsound
 
 # Loading Variables
@@ -21,6 +21,9 @@ class Bot(commands.Bot):
         # We are logged in and ready to chat and use commands...
         print(f'Logged in as | {self.nick}')
         print(f'User id is | {self.user_id}')
+        chan = bot.get_channel(os.getenv("CONNECT_CHANNEL"))
+        loop = asyncio.get_event_loop()
+        loop.create_task(chan.send(f"{self.nick} is currently Online BloodTrail"))
 
     
     # Translator
@@ -31,30 +34,51 @@ class Bot(commands.Bot):
         language_detection = detect(message.content)
         language_translate_back = os.getenv("LANG_DETECT")
         language_fallback = os.getenv("LANG_TO")
-        voice_model = os.getenv("TTS-MODEL")
+        voice_model = os.getenv("TTS_MODEL")
+        print(voice_model)
+        if not isinstance(voice_model, str):
+            raise ValueError("The voice model must be a string.")
         print(f"Detected Language = {language_detection}")
         if language_detection == language_translate_back:
             if message.echo:
                 return
-            print(f"Orginal Message - {orginal_message} by {message.author.name}")
+            print(f"Original Message - {orginal_message} by {message.author.name}")
             time.sleep(2) 
-            translate_message = PyDeepLX.translate(orginal_message, language_detection, language_fallback)
+            deepl = DeepLCLI(f"{language_detection}", f"{language_fallback}")
+            translate_message = await deepl.translate_async(orginal_message)
             print(f"Translated to - {translate_message}")
             await message.channel.send(f"{message.author.name} - {translate_message}")
-            subprocess.run(["edge-tts", "--text",  f"{translate_message}", "--write-media", "audio.mp3", "-v", f"{voice_model}"])
+            communicate = edge_tts.Communicate(translate_message, voice_model)
+            with open("audio.mp3", "wb") as file:
+                for chunk in communicate.stream_sync():
+                    if chunk["type"] == "audio":
+                        file.write(chunk["data"])
+                    elif chunk["type"] == "WordBoundary":
+                        print(f"WordBoundary: {chunk}")
             playsound("audio.mp3")
+            os.remove("audio.mp3")
             return
         else:
             if message.echo:
                 return
-            print(f"Orginal Message - {orginal_message} by {message.author.name}")
+            if not isinstance(voice_model, str):
+                raise ValueError("The voice model must be a string.")
+            print(f"Original Message - {orginal_message} by {message.author.name}")
             time.sleep(2)
-            translate_message = PyDeepLX.translate(orginal_message)
+            deepl = DeepLCLI("auto", "en")
+            translate_message = await deepl.translate_async(orginal_message)
             print(f"Translated to - {translate_message}")
             await message.channel.send(f"{message.author.name} - {translate_message}")
-            subprocess.run(["edge-tts", "--text",  f"{translate_message}", "--write-media", "audio.mp3", "-v", f"{voice_model}"])
+            communicate = edge_tts.Communicate(translate_message, voice_model)
+            with open("audio.mp3", "wb") as file:
+                for chunk in communicate.stream_sync():
+                    if chunk["type"] == "audio":
+                        file.write(chunk["data"])
+                    elif chunk["type"] == "WordBoundary":
+                        print(f"WordBoundary: {chunk}")
             playsound("audio.mp3")
-            return
+            os.remove("audio.mp3")
+
 
 bot = Bot()
 bot.run()
