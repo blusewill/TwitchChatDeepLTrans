@@ -1,2 +1,2 @@
 # TwitchChatDeepLTrans
-The Twitch Chat Translator using DeepLX API
+The Twitch Chat Translator using deepl-cli API
